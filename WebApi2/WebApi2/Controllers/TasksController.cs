@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using WebApi2.Models;
+using WebApi2.Services;
 using Taskk = WebApi2.Models.Taskk;
 
 namespace WebApi2.Controllers
@@ -48,21 +49,33 @@ namespace WebApi2.Controllers
            }
         };
 
-        
 
-  
-        [HttpGet]
-        public ActionResult<IEnumerable<Taskk>> Get()
+        private readonly TaskRepository repo;
+
+        public TasksController(TaskRepository _repo)
         {
-            //return StatusCode(StatusCodes.Status200OK, "Hi :)");
-            return Ok(_tasks);
-            
+            repo = _repo;
         }
+        // GET api/tasks
+        [HttpGet]
+        public ActionResult<List<Taskk>> Get()
+        {
+            
+            return Ok(repo.GetAll());
+        }
+
+        //[HttpGet]
+        //public ActionResult<IEnumerable<Taskk>> Get()
+        //{
+        //    //return StatusCode(StatusCodes.Status200OK, "Hi :)");
+        //    return Ok(_tasks);
+            
+        //}
 
         [HttpGet("{id}")]
         public ActionResult<Taskk> Get(int id)
         {
-            Taskk task = _tasks.FirstOrDefault(t => t.Id == id);
+            Taskk task = repo.GetTaskById(id);
             if (null== task)
             {
                 return NotFound($"Task with id: {id} not found");
@@ -72,23 +85,16 @@ namespace WebApi2.Controllers
         }
 
         [HttpPost]
-        public ActionResult<string> Post([FromBody] Taskk obj)
+        public ActionResult<Taskk> Post([FromBody] Taskk newTask)
         {
-            Taskk newTask = new Taskk
-            {
-                Id = _tasks.Count() + 1,
-                Title= obj.Title,
-                Description= obj.Description
-                
-            };
-            _tasks.Add(newTask);
-            return Ok(newTask);
+            List<Taskk> tasks = repo.CreateTask(newTask);
+            return Ok(tasks);
         }
 
         [HttpPut("{id}")]
-        public ActionResult<string> Put([FromBody] Taskk obj, int id)
+        public ActionResult<Taskk> Put([FromBody] Taskk obj, int id)
         {
-            Taskk task = _tasks.FirstOrDefault(t => t.Id == id);
+            Taskk task = repo.UpdateTask(id, obj);
             if(task == null)
             {
                 return NotFound();
@@ -98,6 +104,10 @@ namespace WebApi2.Controllers
 
             return Ok(task);
         }
+        [HttpDelete("{id}")]
+        public void Delete(int id)
+        {
 
+        }
     }
 }
