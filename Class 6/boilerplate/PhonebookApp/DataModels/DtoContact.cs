@@ -2,12 +2,11 @@
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
-using System.Linq;
-using System.Threading.Tasks;
+using System.Text;
 
-namespace PhoneBook.Models
+namespace DataModels
 {
-    public class Contact: BaseModel
+    public class DtoContact
     {
         [Key]
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
@@ -20,6 +19,6 @@ namespace PhoneBook.Models
         public string Address { get; set; }
         public string PhoneNumber { get; set; }
         public int UserId { get; set; }
-        
+        public virtual DtoUser User { get; set; }
     }
 }

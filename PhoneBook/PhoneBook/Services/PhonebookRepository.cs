@@ -19,5 +19,6 @@ namespace PhoneBook.Services
         {
             return db.Set<T>().ToList();
         }
+
     }
 }

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using DataModels;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -15,11 +16,12 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
-using PhoneBook.Models;
-using PhoneBook.Services;
+using Models;
+using Repository;
+using Services;
 using Swashbuckle.AspNetCore.Swagger;
 
-namespace PhoneBook
+namespace Phonebook
 {
     public class Startup
     {
@@ -33,16 +35,34 @@ namespace PhoneBook
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
+            services.AddCors(opts => opts.AddPolicy("AllowOrigins", b => b
+                .AllowAnyOrigin()
+                .AllowAnyHeader()
+                .AllowAnyMethod()
+            ));
+
             services.AddMvc().SetCompatibilityVersion(CompatibilityVersion.Version_2_1);
 
-            services.AddCors(c => c.AddPolicy("AllowOrigin", options =>
-            options.WithOrigins("*").WithMethods("*").WithHeaders("*")));
-
-            services.AddSwaggerGen(c => c.SwaggerDoc("v1", new Info
+            services.AddSwaggerGen(c =>
             {
-                Title = "My Api",
-                Version = "v1"
-            }));
+                c.SwaggerDoc("v1", new Info { Title = "Phonebook API", Version = "v1" });
+
+                c.AddSecurityDefinition("Bearer", new ApiKeyScheme
+                {
+                    Description = "JWT Authorization header using the bearer scheme",
+                    Name = "Authorization",
+                    In = "header",
+                    Type = "apiKey"
+                });
+
+                var security = new Dictionary<string, IEnumerable<string>>
+                {
+                    {"Bearer", Enumerable.Empty<string>() }
+                };
+
+                c.AddSecurityRequirement(security);
+            });
+
             var jwtSettingsSection = Configuration.GetSection("JwtSettings");
             services.Configure<JwtSettings>(jwtSettingsSection);
 
@@ -64,16 +84,20 @@ namespace PhoneBook
                     ValidateAudience = false
                 };
             });
+
             services.Configure<CookiePolicyOptions>(options =>
             {
                 options.CheckConsentNeeded = context => true;
                 options.MinimumSameSitePolicy = SameSiteMode.None;
             });
 
-            services.AddDbContext<PhonebookDbContext>(options =>
-            options.UseSqlServer(Configuration.GetConnectionString("localDb")));
-
-            services.AddTransient<PhonebookRepository,PhonebookRepository>();
+            services.AddDbContext<PhonebookDbContext>(opts => opts
+                .UseSqlServer(Configuration.GetConnectionString("PhonebookDb"))
+            );
+            services.AddTransient<IRepository<DtoUser>, UserRepository>();
+            services.AddTransient<IRepository<DtoContact>, ContactRepository>();
+            services.AddTransient<IUserService, UserService>();
+            services.AddTransient<IContactService, ContactService>();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -82,17 +106,23 @@ namespace PhoneBook
             if (env.IsDevelopment())
             {
                 app.UseDeveloperExceptionPage();
+
+                app.UseSwagger();
+                app.UseSwaggerUI(c =>
+                {
+                    c.SwaggerEndpoint("/swagger/v1/swagger.json", "Phonebook API V1");
+                });
             }
             else
             {
                 app.UseHsts();
             }
-            app.UseCors("AllowOrigin");
-            app.UseSwagger();
-            app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "My Api v1"));
+
             app.UseHttpsRedirection();
-            app.UseMvc();
+            app.UseCors("AllowOrigins");
             app.UseAuthentication();
+
+            app.UseMvc();
         }
     }
 }
