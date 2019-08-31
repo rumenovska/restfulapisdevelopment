@@ -60,6 +60,16 @@ namespace Services
 
         public void Register(RegisterModel registerModel)
         {
+            bool usernameExists = _userRepo.GetAll()
+               .SingleOrDefault(u => u.Username == registerModel.Username) != null;
+
+            if (usernameExists)
+                throw new Exception("Username already exists!");
+
+            bool passwordNotConfirmed = registerModel.Password != registerModel.ConfirmPassword;
+
+            if (passwordNotConfirmed)
+                throw new Exception("Password doesn't match");
             _userRepo.Add(new DtoUser
             {
                 FirstName = registerModel.FirstName,
